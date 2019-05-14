@@ -18,8 +18,8 @@ DEBUG = false;
 toUpdateWithSensor = true;         %  Switch of executing correction step.
 
 KNOWN_CORRESPONDENCY   = true;     %  (Known | Unkown) correspondency case.
-WATCH_SCOPE            = 65;       %  Range of x and y axis, DEFAULT: 35.
-CLEAR_PATH_STEPS       = 150;      %  #steps to clear previous path.
+WATCH_SCOPE            = 35;       %  Range of x and y axis, DEFAULT: 35.
+CLEAR_PATH_STEPS       = 300;      %  #steps to clear previous path.
 
 MLH_THRESHOLD_LANDMARK = 0;        %  Threshold to corrected with sensor
                                    %  information, only used when unkown
@@ -64,7 +64,7 @@ hold on;
 for i = 1:length(LM_X)
     scatter(LM_X(i), LM_Y(i), [], 'd');
 end
-title('EKF LOCALIZATION (green: corrected, red: predicted)')
+title('Sequential EKF LOCALIZATION (green: corrected, red: predicted)')
 xlabel('x axis')
 ylabel('y axis')
 
@@ -87,8 +87,8 @@ previous_pose  = [x_p y_p phi_p].';
 count = 0;
 while 1
     count = count + 1;
-    if count > 3000
-        break
+    if count > 10000
+        break;
     end
 
     %  clear draw every CLEAR_PATH_STEPS steps
@@ -100,7 +100,7 @@ while 1
         for i = 1:length(LM_X)
             scatter(LM_X(i), LM_Y(i), [], 'd');
         end
-        title('EKF LOCALIZATION (green: corrected, red: predicted)')
+        title('Sequential EKF LOCALIZATION (green: corrected, red: predicted)')
         xlabel('x axis')
         ylabel('y axis')
     end
