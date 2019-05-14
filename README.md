@@ -18,6 +18,12 @@ __LICENSE__&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : MIT
 17 WATCH_SCOPE            = <value_you_want>;
 ```
 
+### Plot Covariance with different confident
+In `plotGaussian.m`, modify <confidence> to meet your need.
+```matlab
+33 chisquare_val = sqrt(chi2inv(<confidence>, 2));
+```
+
 ---
 
 ## REFERENCE

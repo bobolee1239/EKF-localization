@@ -29,8 +29,8 @@ end
 % Get the coordinates of the data mean
 avg = mean;
 
-% Get the 95% confidence interval error ellipse
-chisquare_val = 2.4477;
+% Get the 95% : 2.4477, 68% : 1.5096 confidence interval error ellipse
+chisquare_val = sqrt(chi2inv(0.6827, 2));
 theta_grid = linspace(0,2*pi);
 phi = angle;
 X0=avg(1);

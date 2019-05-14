@@ -10,13 +10,15 @@
 % Recontributed by PooPoo, Tsung-Han Brian Lee
 % -------------------------------------------------
 % *************************************************
-clc;clear
+clc;close all; clear all;
 clear figure
+
+DEBUG = false;
 
 toUpdateWithSensor = true;         %  Switch of executing correction step.
 
 KNOWN_CORRESPONDENCY   = true;     %  (Known | Unkown) correspondency case.
-WATCH_SCOPE            = 50;       %  Range of x and y axis, DEFAULT: 35.
+WATCH_SCOPE            = 65;       %  Range of x and y axis, DEFAULT: 35.
 CLEAR_PATH_STEPS       = 150;      %  #steps to clear previous path.
 
 MLH_THRESHOLD_LANDMARK = 0;        %  Threshold to corrected with sensor
@@ -85,7 +87,7 @@ previous_pose  = [x_p y_p phi_p].';
 count = 0;
 while 1
     count = count + 1;
-    if count > 1000
+    if count > 3000
         break
     end
 
@@ -145,15 +147,29 @@ while 1
     predictedPose = pose + [-v*sin(pose(THETA))/w + v*sin(pose(THETA) + w*del_t)/w;
                              v*cos(pose(THETA))/w - v*cos(pose(THETA) + w*del_t)/w;
                              w*del_t];
-
+    
     poseCovariance = G*poseCovariance*G' + V*M*V';
 
-    plotGaussian(predictedPose, poseCovariance, 'r');
+    plotGaussian(predictedPose(1:2, 1), poseCovariance(1:2, 1:2), 'r');
+    
+    if DEBUG
+        fprintf('[DEBUG] Real x    : %.2f\n', pose_real(X));
+        fprintf('[DEBUG] Real y    : %.2f\n', pose_real(Y));
+        fprintf('[DEBUG] Real theta: %.2f\n', pose_real(THETA));
+        fprintf('----------\n');
+        fprintf('[DEBUG] Predicted x    : %.2f\n', predictedPose(X));
+        fprintf('[DEBUG] Predicted y    : %.2f\n', predictedPose(Y));
+        fprintf('[DEBUG] Predicted theta: %.2f\n', predictedPose(THETA));
+        fprintf('----------\n');
+    end
     % *********************************
     % **** Do not move code above *****
     % *********************************
 
     SenseData = SensorModel(pose_real);
+    if DEBUG
+        SenseData
+    end
 
     %  Update Robotic Pose with cooperation of sensor data
     if toUpdateWithSensor
@@ -187,7 +203,7 @@ while 1
 
             z(:, lm) = [sqrt(q);
                         atan2(yDiff, xDiff) - predictedPose(THETA)];
-
+            
             H(:, :, lm) = [
                 -xDiff/sqrt(q)  -yDiff/sqrt(q)    0;
                  yDiff/q        -xDiff/q         -1;
@@ -214,10 +230,36 @@ while 1
             end
 
             K = poseCovariance * H(:, :, idx)' * inv(S(:, :, idx));
-
-            updateVal = K*(SenseData(ob, 2:3).' - z(:, idx));
+            
+            if DEBUG
+                fprintf('[DEBUG] Relevant distance: %.2f\n', z(1, idx));
+                fprintf('[DEBUG] Relevant angle   : %.2f\n', z(2, idx));
+                fprintf('----------\n');
+            end
+            
+            %  Restrict err range in -pi ~ pi
+            err = SenseData(ob, 2:3).' - z(:, idx);
+            while err(2) > pi | err(2) < -pi
+                if err(2) > pi
+                    err(2) = err(2) - 2*pi;
+                elseif err(2) < -pi
+                    err(2) = err(2) + 2*pi;
+                end
+			end
+			
+            updateVal      = K * err;
             predictedPose  = predictedPose + updateVal;
             poseCovariance = (eye(3) - K*H(:, :, idx)) * poseCovariance;
+            
+            if DEBUG
+                fprintf('[DEBUG] Error distance    : %.2f\n', err(1));
+                fprintf('[DEBUG] Error angle       : %.2f\n', err(2));
+                fprintf('----------\n');
+                fprintf('[DEBUG] Corrected x    : %.2f\n', predictedPose(X));
+                fprintf('[DEBUG] Corrected y    : %.2f\n', predictedPose(Y));
+                fprintf('[DEBUG] Corrected theta: %.2f\n', predictedPose(THETA));
+                fprintf('----------\n');
+            end
         else
             fprintf('[INFO] : NOT CORRECTED FOR AMBIGUITY LANDMARK!\n');
             if ~(ob == idx)
@@ -229,12 +271,19 @@ while 1
     end
 
     if numWatchedLandmark > 0
-        plotGaussian(predictedPose, poseCovariance, 'g');
+        plotGaussian(predictedPose(1:2, 1), poseCovariance(1:2, 1:2), 'g');
+		if numWatchedLandmark > 1
+			fprintf('[INFO] LUCKY! Updating with %d observation!\n', numWatchedLandmark);
+		end
     end
 
     end
 
     pose = predictedPose;
 
-    pause(0.01);
+    if DEBUG
+        pause(0.05);
+    else
+        pause(0.01);
+    end
 end
